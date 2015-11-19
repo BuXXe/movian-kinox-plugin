@@ -8,7 +8,7 @@
   "author": "BuXXe (@buxxe)",
   "title": "kinox.to",
   "icon": "kinox.png",
-  "synopsis": "Showtime plugin to watch kinox.to streams",
-  "description":"<p>kinox.to Showtime plugin allows the integration of kinox.to streams into Showtime.</p>",
-  "homepage":"google.de"
+  "synopsis": "Movian plugin to watch kinox.to streams",
+  "description":"<p>kinox.to Movian plugin allows the integration of kinox.to streams into Movian. kinox.to offers stream for movies and series (mostly german and english)</p>",
+  "homepage":"https://github.com/BuXXe/movian-kinox-plugin"
 }
