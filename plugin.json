@@ -1,0 +1,14 @@
+{
+  "type": "ecmascript",
+  "id": "kinox.to",
+  "file": "kinox.js",
+  "category": "video",
+  "showtimeVersion": "4.3.167",
+  "version": "0.1a",
+  "author": "BuXXe (@buxxe)",
+  "title": "kinox.to",
+  "icon": "kinox.png",
+  "synopsis": "Showtime plugin to watch kinox.to streams",
+  "description":"<p>kinox.to Showtime plugin allows the integration of kinox.to streams into Showtime.</p>",
+  "homepage":"google.de"
+}
