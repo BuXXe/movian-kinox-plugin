@@ -9,6 +9,6 @@
   "title": "kinox.to",
   "icon": "kinox.png",
   "synopsis": "Movian plugin to watch kinox.to streams",
-  "description":"<p>kinox.to Movian plugin allows the integration of kinox.to streams into Movian. kinox.to offers stream for movies and series (mostly german and english)</p>",
+  "description":"<p>kinox.to Movian plugin allows the integration of kinox.to streams into Movian. kinox.to offers stream for movies and series (mostly german and english). If you encounter problems, leave a note at the github. Visit at: https://github.com/BuXXe/movian-kinox-plugin</p>",
   "homepage":"https://github.com/BuXXe/movian-kinox-plugin"
 }
