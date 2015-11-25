@@ -1,24 +1,24 @@
 /**
- * Showtime plugin to watch kinox.to streams 
+ * Movian plugin to watch kinox.to streams 
  *
  * Copyright (C) 2015 BuXXe
  *
- *     This file is part of kinox.to Showtime plugin.
+ *     This file is part of kinox.to Movian plugin.
  *
- *  kinox.to Showtime plugin is free software: you can redistribute it and/or modify
+ *  kinox.to Movian plugin is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  kinox.to Showtime plugin is distributed in the hope that it will be useful,
+ *  kinox.to Movian plugin is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with kinox.to Showtime plugin.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with kinox.to Movian plugin.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Download from : NOT YET AVAILABLE
+ *  Download from : https://github.com/BuXXe/movian-kinox-plugin
  *
  */
    var html = require('showtime/html');
@@ -33,8 +33,6 @@
   // INFO: Helpful Post Data reader: http://www.posttestserver.com/
   
   // HOSTER RESOLVER
-  
-
   function resolveVodLockercom(StreamSiteVideoLink)
   {	  
 	  var postdatas = [];
@@ -586,121 +584,6 @@
 	  	return firstcut.split('" target=')[0];
   }
   
-  
-   
-  // Lists the available episodes for a given season
-  plugin.addURI(PLUGIN_PREFIX + ":SeasonHandler:(.*):(.*):(.*):(.*)", function(page,seriesname,seriesID, season, episodelist){
-	  page.type = 'directory';
-	  
-	  // use episodelist to display the available episodes
-	  var episodesArray = episodelist.split(',');
-
-	  for (var i=0;i<episodesArray.length;i++)
-	  {
-  			page.appendItem(PLUGIN_PREFIX + ":EpisodesHandler:" + seriesname + ":" + seriesID + ":" + season + ":" + episodesArray[i], 'directory', {
-  			  title: "Episode " + episodesArray[i]
-  			});
-	  }
-  });
-  
- 
-  // gives list of available hosts for given episode
-  plugin.addURI(PLUGIN_PREFIX + ":EpisodesHandler:(.*):(.*):(.*):(.*)", function(page,seriesname, seriesID, season, episode){
-	  page.type = 'directory';
-
-	  	var  args = {Addr:seriesname , SeriesID:seriesID ,Season:season, Episode:episode};
-	  	var getMirrorLink = showtime.httpGet("http://kinox.to/aGET/MirrorByEpisode/", args );
-	  
-		var dom = html.parse(getMirrorLink.toString());
-	  	var entries =  dom.root.getElementById('HosterList').getElementByTagName("li");
-	  	
-	  	for (var k=0;k<entries.length;k++)
-	  	{
-	  		// Hoster Name
-    		var hostname = entries[k].getElementByClassName("Named")[0].textContent;
-    		
-    		// hoster id
-    		var id = entries[k].attributes.getNamedItem("id").value
-    		
-    		// get information if this hoster is implemented
-    		var resolverstatus = checkResolver(id); 
-    		
-    		// count of mirrors
-    		var maxMirror =  entries[k].getElementByClassName("Data")[0].textContent.split(":")[1].split("/")[1];
-    		
-    		page.appendItem(PLUGIN_PREFIX + ":PlayEpisode:"+ seriesname  + ":" + id + ":" + "1" + ":" + maxMirror + ":" + season + ":" + episode, 'directory', {
-    			  title: new showtime.RichText(hostname + resolverstatus)
-    			});
-	  	}
-  });
-  
-  
-  //Play Episode gives the final list of direct links for a specific host
-  // here we also need the info about the count of mirrors
-  // http://kinox.to/aGET/Mirror/Two_and_a_Half_Men&Hoster=30&Mirror=2&Season=4&Episode=1
-  // MERGE THIS ONE WITH LinksForMovieHost
-  // Only differences: the args for the get request and the resolve of maxmirror
-
-  // Introducing a Series Flag: If the flag is equal to 0 we only use hosterid and URLname
-  // If the flag is 1 we have a series and need maxmirrors, season, episode too.
-  
-  // Here we have one specific Hoster selected and need to handle their links
-  plugin.addURI(PLUGIN_PREFIX + ":PlayEpisode:(.*):(.*):(.*):(.*):(.*):(.*)", function(page, URLname, hosterid, seriesflag, maxmirror, season, episode){
-	  	page.type = 'directory';
-
-	  	if(seriesflag == 0)
-	  		var maxmirror = getMaxMirror("/Stream/"+URLname+".html",hosterid);
-	  	
-	    var hosteridnumber = hosterid.split("_")[1];
-	    var StreamSiteVideoLink = [];
-
-	    for (var index = 1; index <= maxmirror; index++) 
-		{
-	    	var args;
-	    	if(seriesflag == 1)
-	    		args = {Hoster:hosteridnumber , Mirror: index, Season:season, Episode:episode};
-	    	else
-	    		args = {Hoster:hosteridnumber , Mirror: index};
-	    		
-	    	var getMirrorLink = showtime.httpGet("http://kinox.to/aGET/Mirror/"+URLname, args );
-		  
-	    	// TODO: check if available!
-	    	StreamSiteVideoLink[StreamSiteVideoLink.length] = getStreamSiteLink(getMirrorLink);
-		}
-	  
-	    // Here we handle the Hoster specific resolution
-	    HosterResolutionAndDisplay(page,hosteridnumber, StreamSiteVideoLink)
-});
-	  
-  
-  
-  // function which gives available hosts for given response
-  function getHostsForMovies(page, response, URLname)
-  {
-		var dom = html.parse(response.toString());
-	  	var HosterList =  dom.root.getElementById('HosterList');
-	  	
-	  	var entries = HosterList.getElementByTagName("li");
-	  	
-	  	for (var k=0;k<entries.length;k++)
-	  	{
-	  		// Hoster Name
-    		var hostname = entries[k].getElementByClassName("Named")[0].textContent;
-    		
-    		// hoster id
-    		var id = entries[k].attributes.getNamedItem("id").value
-    		
-    		// get information if this hoster is implemented
-    		var resolverstatus = checkResolver(id); 
-    		
-    		// give the effective links for a specific host
-    		// the attachment ":0:-1:X:X" is necessary to allow the use of the same page for series and movies
-    		page.appendItem(PLUGIN_PREFIX + ":PlayEpisode:"+ URLname + ":" + id + ":0:-1:X:X"  , 'directory', {
-    			  title: new showtime.RichText(hostname + resolverstatus)
-    			});
-	  	}
-  }
-  
   function checkResolver(hosterid)
   {
 	  var hosternumber = hosterid.split("_")[1];
@@ -807,44 +690,122 @@
 	    }
   }
   
+  // function which gives available hosts for given response
+  function getHostsForMovies(page, response, URLname)
+  {
+		var dom = html.parse(response.toString());
+	  	var entries = dom.root.getElementById('HosterList').getElementByTagName("li");
+	  	
+	  	for (var k=0;k<entries.length;k++)
+	  	{
+    		var hostname = entries[k].getElementByClassName("Named")[0].textContent;
+    		var id = entries[k].attributes.getNamedItem("id").value
+    		var resolverstatus = checkResolver(id);
+    		var maxMirror =  entries[k].getElementByClassName("Data")[0].textContent.split(":")[1].split("/")[1];
+    		
+    		
+    		// give the effective links for a specific host
+    		// the attachment ":0:-1:X:X" is necessary to allow the use of the same page for series and movies
+    		page.appendItem(PLUGIN_PREFIX + ":PlayEpisode:"+ URLname + ":" + id + ":0:"+maxMirror+":X:X"  , 'directory', {
+    			  title: new showtime.RichText(hostname + resolverstatus)
+    			});
+	  	}
+  }
   
-  // Handles the search results / Recent Movie List
-  // We get the /Stream/XXX Link
-  // differentiate between movies series docus
+  
+  // Play Episode gives the final list of direct links for a specific host
+  // here we also need the info about the count of mirrors
+  // http://kinox.to/aGET/Mirror/Two_and_a_Half_Men&Hoster=30&Mirror=2&Season=4&Episode=1
+  // MERGE THIS ONE WITH LinksForMovieHost
+  // Only differences: the args for the get request and the resolve of maxmirror
+
+  // Introducing a Series Flag: If the flag is equal to 0 we only use hosterid and URLname
+  // If the flag is 1 we have a series and need maxmirrors, season, episode too.
+  
+  // Here we have one specific Hoster selected and need to handle their links
+  plugin.addURI(PLUGIN_PREFIX + ":PlayEpisode:(.*):(.*):(.*):(.*):(.*):(.*)", function(page, URLname, hosterid, seriesflag, maxmirror, season, episode){
+	  	page.type = 'directory';
+
+	  	//if(seriesflag == 0)
+	  	//	var maxmirror = getMaxMirror("/Stream/"+URLname+".html",hosterid);
+	  	
+	    var hosteridnumber = hosterid.split("_")[1];
+	    var StreamSiteVideoLink = [];
+
+	    for (var index = 1; index <= maxmirror; index++) 
+		{
+	    	var args;
+	    	if(seriesflag == 1)
+	    		args = {Hoster:hosteridnumber , Mirror: index, Season:season, Episode:episode};
+	    	else
+	    		args = {Hoster:hosteridnumber , Mirror: index};
+	    		
+	    	var getMirrorLink = showtime.httpGet("http://kinox.to/aGET/Mirror/"+URLname, args );
+		  
+	    	StreamSiteVideoLink[StreamSiteVideoLink.length] = getStreamSiteLink(getMirrorLink);
+		}
+	  
+	    // Here we handle the Hoster specific resolution
+	    HosterResolutionAndDisplay(page,hosteridnumber, StreamSiteVideoLink)
+  });
+  
+  
+  
+  
+  // gives list of available hosts for given episode
+  plugin.addURI(PLUGIN_PREFIX + ":EpisodesHandler:(.*):(.*):(.*):(.*)", function(page,seriesname, seriesID, season, episode){
+	  page.type = 'directory';
+	  var args = {Addr:seriesname , SeriesID:seriesID ,Season:season, Episode:episode};
+	  var getMirrorLink = showtime.httpGet("http://kinox.to/aGET/MirrorByEpisode/", args );
+	  
+	  var dom = html.parse(getMirrorLink.toString());
+	  var entries =  dom.root.getElementById('HosterList').getElementByTagName("li");
+	  	
+	  for (var k=0;k<entries.length;k++)
+	  {
+		  var hostname = entries[k].getElementByClassName("Named")[0].textContent;
+		  var id = entries[k].attributes.getNamedItem("id").value
+		  var resolverstatus = checkResolver(id); 
+		  var maxMirror =  entries[k].getElementByClassName("Data")[0].textContent.split(":")[1].split("/")[1];
+    		
+		  page.appendItem(PLUGIN_PREFIX + ":PlayEpisode:"+ seriesname  + ":" + id + ":" + "1" + ":" + maxMirror + ":" + season + ":" + episode, 'directory', {
+    			  title: new showtime.RichText(hostname + resolverstatus)
+    			});
+	  	}
+  });
+  
+  // Lists the available episodes for a given season
+  plugin.addURI(PLUGIN_PREFIX + ":SeasonHandler:(.*):(.*):(.*):(.*)", function(page,seriesname,seriesID, season, episodelist){
+	  page.type = 'directory';
+	  var episodesArray = episodelist.split(',');
+
+	  for (var i=0;i<episodesArray.length;i++)
+	  {
+  			page.appendItem(PLUGIN_PREFIX + ":EpisodesHandler:" + seriesname + ":" + seriesID + ":" + season + ":" + episodesArray[i], 'directory', {
+  			  title: "Episode " + episodesArray[i]
+  			});
+	  }
+  });
+  
+  // Handles the particular content site (series movie or docu)
   plugin.addURI(PLUGIN_PREFIX + ':StreamSelection:(.*)', function(page, movie) {
 	  	page.loading = false;
 	  	page.type = 'directory';
-
-	    // Specific Movie / Series / Docu Page selected
-	    var moviepage = 'http://kinox.to'+movie;
-	    var moviepageresponse = showtime.httpGet(moviepage);
-	    
-	    // get name of series / movie / docu
+	  	var moviepageresponse = showtime.httpGet('http://kinox.to'+movie);
 	    var URLname = movie.split(".html")[0].split("/Stream/")[1]
-	    
 	  	var dom = html.parse(moviepageresponse.toString());
-	  	var SeasonSelection =  dom.root.getElementById('SeasonSelection')
-	  	
-	  	// differentiate between series and movies
-	  	// if we have a series, the season selection exists
-	    if(SeasonSelection){
-	    	showtime.trace("We have a series with season selection");
-	    	
-	    	// get the seriesID
+	    var SeasonSelection =  dom.root.getElementById('SeasonSelection')
+
+	    // differentiate between series and movies: if we have a series, the season selection exists
+	    if(SeasonSelection)
+	    {
 	    	var seriesID =  SeasonSelection.attributes.getNamedItem("rel").value.split("SeriesID=")[1];
-	    	
-	    	// Parse the selection for the seasons and episodes
 	    	var entries = SeasonSelection.getElementByTagName("option");
-	    	
 	    	for (var k = 0; k< entries.length; k++)
 	    	{	
-	    		// Season as number
 	    		var seasonNumber = entries[k].attributes.getNamedItem("value").value;
-	    		
-	    		// episodes as list of integers
 	    		var episodesList = entries[k].attributes.getNamedItem("rel").value;
 	    		
-	    		// we need to display the season numbers and forward the episode lists to another page
 	    		page.appendItem(PLUGIN_PREFIX + ":SeasonHandler:"+ URLname +":"+ seriesID + ":" + seasonNumber + ":" + episodesList, 'directory', {
 	    			  title: "Season " + seasonNumber
 	    			});
@@ -852,44 +813,25 @@
 	    }
 	    else 
 	    {
-	    	showtime.trace("seems to be no series");
-	    	// Movies and Docus directly show mirror list
 	    	getHostsForMovies(page, moviepageresponse, URLname);
 	    }
 		page.loading = false;
 	});
-
-  
-  // Register a service (will appear on home page)
-  var service = plugin.createService("kinox.to", PLUGIN_PREFIX+"start", "video", true, plugin.path + "kinox.png");
   
   // Shows a list of Recent Cinema Movies 
-  // TODO Language
-  // Can only be interpreted from the language pictures filename
-  // create lookup table to identify language
-  // TODO IMDB Rating / Genre
   plugin.addURI(PLUGIN_PREFIX + ':CineFilms', function(page) {
-	  
 	  	page.type = "directory";
 	    page.metadata.title = "kinox.to Recent Cinema Movies";
 	    
 	  	var CineFilmsResponse = showtime.httpGet("http://kinox.to/Cine-Films.html");
 	  	var dom = html.parse(CineFilmsResponse.toString());
-	  	var vadda =  dom.root.getElementById('Vadda')
-	  	var children = vadda.children
+	  	var children =  dom.root.getElementById('Vadda').children;
 	  	
 	    for(var k=0; k< children.length; k++)
 	    {
-	    	// get stream link
 	    	var streamLink  = children[k].getElementByClassName("Headlne")[0].getElementByTagName("a")[0].attributes.getNamedItem("href").value;
-
-	    	// get title
 	    	var title = children[k].getElementByClassName("Headlne")[0].getElementByTagName("a")[0].attributes.getNamedItem("title").value;
-	    	
-	    	// get description
 	    	var description = children[k].getElementByClassName("Descriptor")[0].textContent;
-	    	
-	    	// get thumbnail
 	    	var thumbnail = children[k].getElementByClassName("Thumb")[0].getElementByTagName("img")[0].attributes.getNamedItem("src").value;
 	    	
 	    	page.appendItem(PLUGIN_PREFIX + ':StreamSelection:'+ streamLink, 'video', {
@@ -900,10 +842,10 @@
 	    }
   });
 
-  
+  // handles the search 
   plugin.addURI(PLUGIN_PREFIX+":Search",function(page) {
 	  page.type="directory";
-	    page.metadata.title = "kinox.to Search";
+	  page.metadata.title = "kinox.to Search";
 
 	  var res = showtime.textDialog("What do you want to search for?", true,true);
 	  
@@ -912,9 +854,7 @@
 		  page.redirect(PLUGIN_PREFIX+"start");
 	  else
 	  {
-		  var SearchQueryResponse = showtime.httpGet("http://kinox.to/Search.html",{
-			  q: res.input});
-		  
+		  var SearchQueryResponse = showtime.httpGet("http://kinox.to/Search.html",{ q: res.input});
 		  var dom = html.parse(SearchQueryResponse.toString());
 		  var children = dom.root.getElementById("RsltTableStatic").getElementByTagName("tbody")[0].children;
 		  
@@ -922,18 +862,12 @@
 		  {
 			  var streamLink = children[k].getElementByClassName("Title")[0].getElementByTagName("a")[0].attributes.getNamedItem("href").value;
 
-			  // some weird entries in the search need to be filtered out:
-			  if(streamLink.indexOf("Search.html") > -1 || streamLink ==""){
+			  // some entries in the search need to be filtered out:
+			  if(streamLink.indexOf("Search.html") > -1 || streamLink =="")
 				  continue;
-			  }
 			  
-			  // get type (series / movie / documentation)
 			  var type = children[k].getElementByClassName("Icon")[1].getElementByTagName("img")[0].attributes.getNamedItem("title").value;
-  
-			  // get title of the stream
 			  var title = children[k].getElementByClassName("Title")[0].getElementByTagName("a")[0].textContent;
-			  
-			  // TODO: get Language as part of item title
 			  var language = children[k].getElementByClassName("Icon")[0].getElementByTagName("img")[0].attributes.getNamedItem("src").value;
 			  
 			  page.appendItem(PLUGIN_PREFIX + ':StreamSelection:'+ streamLink, 'video', {
@@ -944,34 +878,16 @@
 	  }
   });
   
+  // Register a service (will appear on home page)
+  var service = plugin.createService("kinox.to", PLUGIN_PREFIX+"start", "video", true, plugin.path + "kinox.png");
+  
   // Register Start Page
-  // Should Show a Main Menu with Functionalities:
-  // - Cinema Movies - DONE
-  // - Search - Half DONE
-  // - Browse
-  // TODO: - Left-Side-Menu of the main page
   plugin.addURI(PLUGIN_PREFIX+"start", function(page) {
     page.type = "directory";
     page.metadata.title = "kinox.to Main Menu";
-  
-    page.appendItem(PLUGIN_PREFIX + ':CineFilms', 'directory',{
-		  title: "Recent Cinema Movies",
-		});
-    
-    page.appendItem(PLUGIN_PREFIX + ':Search','item',{
-		  title: "Search...",
-	});
-    
+    page.appendItem(PLUGIN_PREFIX + ':CineFilms', 'directory',{ title: "Recent Cinema Movies",});
+    page.appendItem(PLUGIN_PREFIX + ':Search','item',{ title: "Search...",});
 	page.loading = false;
-	   
   });
 
 })(this);
-    
-          
-    
-//  setTimeout(function(){
-//  	showtime.message("after sleep",true,false);
-//  	page.loading = false;
-//  	}, 10000);
-//  
