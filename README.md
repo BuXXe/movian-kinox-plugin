@@ -18,3 +18,4 @@ As this plugin was initially only meant for personal usage, bug fixes and additi
 * Cloudtime.to
 * Novamov.com
 * Flashx.tv
+* Promptfile.com

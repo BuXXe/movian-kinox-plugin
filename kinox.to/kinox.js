@@ -26,7 +26,7 @@
 (function(plugin) {
 
   var PLUGIN_PREFIX = "kinox.to:";
-  var availableResolvers = ['7','8','15','24','30','33','34','40','52'];
+  var availableResolvers = ['7','8','15','24','30','33','34','40','52','56'];
   
   // integrated resolver info:
   // Streamcloud.eu
@@ -38,6 +38,41 @@
   // Cloudtime.to
   // Novamov.com
   // Flashx.tv
+  // Promptfile.com
+  
+  
+  
+  // get a list streamlinks and return ruples of streamlink and finallink
+  function resolvePromptfilecom(StreamSiteVideoLink)
+  {
+	  	var ListOfLinks = [];
+	  	for (var index = 0; index < StreamSiteVideoLink.length; index++) 
+	  	{ 
+		  	var postdata;
+	    	var getEmissionsResponse = showtime.httpReq(StreamSiteVideoLink[index],{noFollow:true,compression:true});
+	    	
+	    	var dom = html.parse(getEmissionsResponse.toString());
+	    	var chash;
+	    	
+	    	try
+	    	{
+	    		chash = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[0].attributes.getNamedItem("value").value;
+	    	}
+	    	catch(e)
+	    	{
+	    		// seems like the file is not available
+	    		continue;
+	    	}
+	
+	    	postdata = {chash:chash};
+		     
+		    // POSTING DATA
+		    var postresponse = showtime.httpReq(StreamSiteVideoLink[index], {noFollow:true,compression:true,postdata: postdata, method: "POST" });
+		    var finallink = /url: '(.*)',/gi.exec(postresponse.toString());
+		    ListOfLinks[ListOfLinks.length] = [StreamSiteVideoLink[index],finallink[1]];
+	  	}
+	  	return ListOfLinks;
+  }
   
   // get a list streamlinks and return ruples of streamlink and finallink
   function resolveFlashxtv(StreamSiteVideoLink)
@@ -533,6 +568,11 @@
 	    else if (hosternumber == 33)
 	    {
 	    	FinalLinks = resolveFlashxtv(StreamSiteVideoLink);
+	    }
+	    // Promptfile.com
+	    else if (hosternumber == 56)
+	    {
+	    	FinalLinks = resolvePromptfilecom(StreamSiteVideoLink);
 	    }
 	    
 	    
