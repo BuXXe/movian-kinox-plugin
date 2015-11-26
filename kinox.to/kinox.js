@@ -26,11 +26,70 @@
 (function(plugin) {
 
   var PLUGIN_PREFIX = "kinox.to:";
-  var availableResolvers = ['7','8','15','24','30','34','40','52'];
+  var availableResolvers = ['7','8','15','24','30','33','34','40','52'];
   
-  // TODO: integrate flashx  
-  
-  
+  // get a list streamlinks and return ruples of streamlink and finallink
+  function resolveFlashxtv(StreamSiteVideoLink)
+  {
+	  	var ListOfLinks = [];
+	  	for (var index = 0; index < StreamSiteVideoLink.length; index++) 
+	  	{ 
+		  	var postdata=[];
+		  	
+	    	var getEmissionsResponse = showtime.httpGet(StreamSiteVideoLink[index]);
+	    	var dom = html.parse(getEmissionsResponse.toString());
+	    	var res = [];
+	    	
+	    	try
+	    	{
+		    	res[1] = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[0].attributes.getNamedItem("value").value;
+		    	res[2] = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[1].attributes.getNamedItem("value").value;
+		    	res[3] = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[2].attributes.getNamedItem("value").value;
+		    	res[4] = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[3].attributes.getNamedItem("value").value;
+		    	res[5] = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[4].attributes.getNamedItem("value").value;
+		    	res[6] = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[5].attributes.getNamedItem("value").value;
+		    	res[7] = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[6].attributes.getNamedItem("value").value;
+	    	}
+	    	catch(e)
+	    	{
+	    		// seems like the file is not available
+	    		postdata[postdata.length] = null;
+	    		continue;
+	    	}
+	
+	    	postdata[postdata.length] = {op:res[1], usr_login:res[2], id: res[3],fname:res[4],referer: res[5],hash:res[6],imhuman:res[7]};
+	  	}
+		    
+	    // POST DATA COLLECTED
+	    // WAIT 7 SECONDS
+	    for (var i = 0; i < 8; i++) {
+	    	showtime.notify("Waiting " + (7-i).toString() +" Seconds",1);
+	        showtime.sleep(1);
+	    }
+	    for (var index = 0; index < StreamSiteVideoLink.length; index++) 
+	  	{ 
+	    	if(postdata[index]!=null)
+	    	{
+		    	// POSTING DATA
+			    var postresponse = showtime.httpReq(StreamSiteVideoLink[index], { postdata: postdata[index], method: "POST" });
+			     
+			    dom = html.parse(postresponse.toString());
+			    
+			    // put vid link together
+			    // get cdn server number and luq4 hash
+			    var cdn = dom.root.getElementById('vplayer').getElementByTagName("img")[0].attributes.getNamedItem("src").value;
+			    cdn = /.*thumb\.(.*)\.fx.*/gi.exec(cdn)[1]    	    	   
+			    
+			    // TODO: perhaps allow other quality settings -> here we always take normal
+			    var luqhash = /normal\|luq4(.*?)\|/gi.exec(postresponse.toString())[1];
+			    var finallink = "http://play."+cdn+".fx.fastcontentdelivery.com/luq4"+luqhash+"/normal.mp4";
+		    	
+			    ListOfLinks[ListOfLinks.length] = [StreamSiteVideoLink[index],finallink];
+	    	}
+	  	}
+	  	return ListOfLinks;
+  }
+
   // get a list streamlinks and return ruples of streamlink and finallink
   function resolveNovamovcom(StreamSiteVideoLink)
   {
@@ -458,6 +517,11 @@
 	    else if (hosternumber == 15)
 	    {
 	    	FinalLinks = resolveNovamovcom(StreamSiteVideoLink);
+	    }
+	    // Flashx.tv
+	    else if (hosternumber == 33)
+	    {
+	    	FinalLinks = resolveFlashxtv(StreamSiteVideoLink);
 	    }
 	    
 	    
