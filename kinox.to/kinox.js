@@ -26,9 +26,110 @@
 (function(plugin) {
 
   var PLUGIN_PREFIX = "kinox.to:";
-  var availableResolvers = ['7','24','30','34','40','52'];
+  var availableResolvers = ['7','8','15','24','30','34','40','52'];
   
-  // TODO: integrate flashx  cloudtime novamov
+  // TODO: integrate flashx  
+  
+  
+  // get a list streamlinks and return ruples of streamlink and finallink
+  function resolveNovamovcom(StreamSiteVideoLink)
+  {
+	  	var ListOfLinks = [];
+	  	for (var index = 0; index < StreamSiteVideoLink.length; index++) 
+	  	{ 
+		    var correctedlink = StreamSiteVideoLink[index].replace("/Out/?s=","");
+		  	var postdata;
+	    	var getEmissionsResponse = showtime.httpReq(correctedlink,{noFollow:true,compression:true});
+	    	
+	    	var dom = html.parse(getEmissionsResponse.toString());
+	    	var stepkey;
+	    	
+	    	try
+	    	{
+	    		stepkey = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[0].attributes.getNamedItem("value").value;
+	    	}
+	    	catch(e)
+	    	{
+	    		// seems like the file is not available
+	    		continue;
+	    	}
+	
+	    	postdata = {stepkey:stepkey};
+		     
+		    // POSTING DATA
+		    var postresponse = showtime.httpReq(correctedlink, {noFollow:true,compression:true,postdata: postdata, method: "POST" });
+	    	
+		    try
+	    	{
+		    	var cid = /flashvars.cid="(.*)";/gi.exec(postresponse.toString())[1];
+		    	var key = /flashvars.filekey="(.*)";/gi.exec(postresponse.toString())[1];
+		    	var file = /flashvars.file="(.*)";/gi.exec(postresponse.toString())[1];
+	    	}catch(e)
+	    	{
+	    		continue;
+	    	}
+	    	
+		    var postresponse = showtime.httpReq("http://www.novamov.com/api/player.api.php", {method: "GET" , args:{
+		    	user:"undefined",
+		    		cid3:"bs.to",
+		    		pass:"undefined",
+		    		cid:cid,
+		    		cid2:"undefined",
+		    		key:key,
+		    		file:file,
+		    		numOfErrors:"0"
+		    }});
+			    
+		    var finallink = /url=(.*)&title/.exec(postresponse.toString());
+		    ListOfLinks[ListOfLinks.length] = [correctedlink,finallink[1]];
+	  	}
+	  	return ListOfLinks;
+  }
+  
+  // get a list streamlinks and return ruples of streamlink and finallink  
+  function resolveCloudtimeto(StreamSiteVideoLink)
+  {
+	  	var ListOfLinks = [];
+	  	for (var index = 0; index < StreamSiteVideoLink.length; index++) 
+	  	{ 
+		  	// This gets the mobile version of the video file (mp4)
+		  	// due to bad performance this is not used
+		  	/*var videohash= StreamSiteVideoLink.split("/");
+		  	videohash = videohash[videohash.length-1];
+	  		getEmissionsResponse = showtime.httpGet("http://www.cloudtime.to/mobile/video.php?id="+videohash);
+	  	    var finallink = /<source src="(.*)" type="video\/mp4">/gi.exec(getEmissionsResponse.toString());
+	    	return [StreamSiteVideoLink,finallink[1]];*/
+	    	
+	    	// The Request needs to have specific parameters, otherwise the response object is the mobile version of the page
+	    	var getEmissionsResponse = showtime.httpReq(StreamSiteVideoLink[index],{noFollow:true,compression:true});
+	  		  	
+	    	try
+	    	{
+		    	var cid = /flashvars.cid="(.*)";/gi.exec(getEmissionsResponse.toString())[1];
+		    	var key = /flashvars.filekey="(.*)";/gi.exec(getEmissionsResponse.toString())[1];
+		    	var file = /flashvars.file="(.*)";/gi.exec(getEmissionsResponse.toString())[1];
+	    	}catch(e)
+	    	{
+	    		continue;
+	    	}
+	    	
+		    var postresponse = showtime.httpReq("http://www.cloudtime.to/api/player.api.php", {method: "GET" , args:{
+		    	user:"undefined",
+		    		cid3:"bs.to",
+		    		pass:"undefined",
+		    		cid:cid,
+		    		cid2:"undefined",
+		    		key:key,
+		    		file:file,
+		    		numOfErrors:"0"
+		    }});
+			    
+		    var finallink = /url=(.*)&title/.exec(postresponse.toString());
+		        	
+		    ListOfLinks[ListOfLinks.length] = [StreamSiteVideoLink[index],finallink[1]];
+	  	}
+	  	return ListOfLinks;
+  }
   
   
   // get a list streamlinks and return ruples of streamlink and finallink
@@ -38,8 +139,6 @@
 	  	for (var index = 0; index < StreamSiteVideoLink.length; index++) 
 	  	{ 
 	  		var correctedlink=StreamSiteVideoLink[index].replace("/Out/?s=","");
-		  	showtime.trace(StreamSiteVideoLink[index]);
-
 		  	var postdata;
 		
 			// The Request needs to have specific parameters, otherwise the response object is the mobile version of the page
@@ -350,6 +449,17 @@
 	    {
 	    	FinalLinks = resolveMovsharenet(StreamSiteVideoLink);
 	    }
+	    // Cloudtime.to
+	    else if (hosternumber == 8)
+	    {
+	    	FinalLinks = resolveCloudtimeto(StreamSiteVideoLink);
+	    }
+	    // Novamov.com
+	    else if (hosternumber == 15)
+	    {
+	    	FinalLinks = resolveNovamovcom(StreamSiteVideoLink);
+	    }
+	    
 	    
 	    return FinalLinks;
 	    
