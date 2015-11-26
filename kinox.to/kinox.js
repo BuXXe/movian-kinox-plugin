@@ -37,19 +37,36 @@
 	  	var ListOfLinks = [];
 	  	for (var index = 0; index < StreamSiteVideoLink.length; index++) 
 	  	{
-	    	var getEmissionsResponse = showtime.httpReq(StreamSiteVideoLink[index],{noFollow:true,compression:true});
+	  		var getEmissionsResponse = showtime.httpReq(StreamSiteVideoLink[index],{noFollow:true,compression:true});
+	    	var dom = html.parse(getEmissionsResponse.toString());
+	    	var stepkey;
+	    	
+	    	try
+	    	{
+	    		stepkey = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[0].attributes.getNamedItem("value").value;
+	    	}
+	    	catch(e)
+	    	{
+	    		// seems like the file is not available
+	    		continue;
+	    	}
+
+	    	postdata = {stepkey:stepkey};
+		     
+		    // POSTING DATA
+		    var postresponse = showtime.httpReq(StreamSiteVideoLink[index], {noFollow:true,compression:true,postdata: postdata, method: "POST" });
 	  		  	
 	    	try
 	    	{
-		    	var cid = /flashvars.cid="(.*)";/gi.exec(getEmissionsResponse.toString())[1];
-		    	var key = /flashvars.filekey="(.*)";/gi.exec(getEmissionsResponse.toString())[1];
-		    	var file = /flashvars.file="(.*)";/gi.exec(getEmissionsResponse.toString())[1];
+		    	var cid = /flashvars.cid="(.*)";/gi.exec(postresponse.toString())[1];
+		    	var key = /flashvars.filekey="(.*)";/gi.exec(postresponse.toString())[1];
+		    	var file = /flashvars.file="(.*)";/gi.exec(postresponse.toString())[1];
 	    	}catch(e)
 	    	{
 	    		continue;
 	    	}
 	    	
-		    var postresponse = showtime.httpReq("http://www.videoweed.es/api/player.api.php", {method: "GET" , args:{
+		    postresponse = showtime.httpReq("http://www.videoweed.es/api/player.api.php", {method: "GET" , args:{
 		    	user:"undefined",
 		    		cid3:"kinox.to",
 		    		pass:"undefined",
