@@ -28,6 +28,17 @@
   var PLUGIN_PREFIX = "kinox.to:";
   var availableResolvers = ['7','8','15','24','30','33','34','40','52'];
   
+  // integrated resolver info:
+  // Streamcloud.eu
+  // Filenuke.com
+  // NowVideo.sx
+  // Shared.sx
+  // VideoWeed.es
+  // Movshare.net
+  // Cloudtime.to
+  // Novamov.com
+  // Flashx.tv
+  
   // get a list streamlinks and return ruples of streamlink and finallink
   function resolveFlashxtv(StreamSiteVideoLink)
   {
