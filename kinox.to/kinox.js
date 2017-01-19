@@ -1,7 +1,7 @@
 /**
  * Movian plugin to watch kinox.to streams 
  *
- * Copyright (C) 2015 BuXXe
+ * Copyright (C) 2015-2017 BuXXe
  *
  *     This file is part of kinox.to Movian plugin.
  *
@@ -22,581 +22,32 @@
  *
  */
    var html = require('showtime/html');
+   var resolvers = require('./libs/hoster-resolution-library/hrl');
 
 (function(plugin) {
 
   var PLUGIN_PREFIX = "kinox.to:";
-  var availableResolvers = ['7','8','15','24','30','33','34','40','52','56'];
-  
-  // integrated resolver info:
-  // Streamcloud.eu
-  // Filenuke.com
-  // NowVideo.sx
-  // Shared.sx
-  // VideoWeed.es
-  // Movshare.net
-  // Cloudtime.to
-  // Novamov.com
-  // Flashx.tv
-  // Promptfile.com
-  
-  
-  
-  // get a list streamlinks and return ruples of streamlink and finallink
-  function resolvePromptfilecom(StreamSiteVideoLink)
-  {
-	  	var ListOfLinks = [];
-	  	for (var index = 0; index < StreamSiteVideoLink.length; index++) 
-	  	{ 
-		  	var postdata;
-	    	var getEmissionsResponse = showtime.httpReq(StreamSiteVideoLink[index],{noFollow:true,compression:true});
-	    	
-	    	var dom = html.parse(getEmissionsResponse.toString());
-	    	var chash;
-	    	
-	    	try
-	    	{
-	    		chash = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[0].attributes.getNamedItem("value").value;
-	    	}
-	    	catch(e)
-	    	{
-	    		// seems like the file is not available
-	    		continue;
-	    	}
-	
-	    	postdata = {chash:chash};
-		     
-		    // POSTING DATA
-		    var postresponse = showtime.httpReq(StreamSiteVideoLink[index], {noFollow:true,compression:true,postdata: postdata, method: "POST" });
-		    var finallink = /url: '(.*)',/gi.exec(postresponse.toString());
-		    ListOfLinks[ListOfLinks.length] = [StreamSiteVideoLink[index],finallink[1]];
-	  	}
-	  	return ListOfLinks;
-  }
-  
-  // get a list streamlinks and return ruples of streamlink and finallink
-  function resolveFlashxtv(StreamSiteVideoLink)
-  {
-	  	var ListOfLinks = [];
-	  	for (var index = 0; index < StreamSiteVideoLink.length; index++) 
-	  	{ 
-		  	var postdata=[];
-		  	
-	    	var getEmissionsResponse = showtime.httpGet(StreamSiteVideoLink[index]);
-	    	var dom = html.parse(getEmissionsResponse.toString());
-	    	var res = [];
-	    	
-	    	try
-	    	{
-		    	res[1] = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[0].attributes.getNamedItem("value").value;
-		    	res[2] = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[1].attributes.getNamedItem("value").value;
-		    	res[3] = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[2].attributes.getNamedItem("value").value;
-		    	res[4] = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[3].attributes.getNamedItem("value").value;
-		    	res[5] = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[4].attributes.getNamedItem("value").value;
-		    	res[6] = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[5].attributes.getNamedItem("value").value;
-		    	res[7] = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[6].attributes.getNamedItem("value").value;
-	    	}
-	    	catch(e)
-	    	{
-	    		// seems like the file is not available
-	    		postdata[postdata.length] = null;
-	    		continue;
-	    	}
-	
-	    	postdata[postdata.length] = {op:res[1], usr_login:res[2], id: res[3],fname:res[4],referer: res[5],hash:res[6],imhuman:res[7]};
-	  	}
-		    
-	    // POST DATA COLLECTED
-	    // WAIT 7 SECONDS
-	    for (var i = 0; i < 8; i++) {
-	    	showtime.notify("Waiting " + (7-i).toString() +" Seconds",1);
-	        showtime.sleep(1);
-	    }
-	    for (var index = 0; index < StreamSiteVideoLink.length; index++) 
-	  	{ 
-	    	if(postdata[index]!=null)
-	    	{
-		    	// POSTING DATA
-			    var postresponse = showtime.httpReq(StreamSiteVideoLink[index], { postdata: postdata[index], method: "POST" });
-			     
-			    dom = html.parse(postresponse.toString());
-			    
-			    // put vid link together
-			    // get cdn server number and luq4 hash
-			    var cdn = dom.root.getElementById('vplayer').getElementByTagName("img")[0].attributes.getNamedItem("src").value;
-			    cdn = /.*thumb\.(.*)\.fx.*/gi.exec(cdn)[1]    	    	   
-			    
-			    // TODO: perhaps allow other quality settings -> here we always take normal
-			    var luqhash = /normal\|luq4(.*?)\|/gi.exec(postresponse.toString())[1];
-			    var finallink = "http://play."+cdn+".fx.fastcontentdelivery.com/luq4"+luqhash+"/normal.mp4";
-		    	
-			    ListOfLinks[ListOfLinks.length] = [StreamSiteVideoLink[index],finallink];
-	    	}
-	  	}
-	  	return ListOfLinks;
-  }
+  var HosternameDict = { 
+	7:"Wholecloud",
+	8:"Cloudtime",
+	30:"Streamcloud",
+	31:"Xvidstage",
+	33:"Flashx",
+	40:"Nowvideo",
+	51:"Vidto",
+	58:"TheVideo",
+	62:"Letwatch",
+	67:"Openload",
+	68:"Vidzi"
+  };
 
-  // get a list streamlinks and return ruples of streamlink and finallink
-  function resolveNovamovcom(StreamSiteVideoLink)
-  {
-	  	var ListOfLinks = [];
-	  	for (var index = 0; index < StreamSiteVideoLink.length; index++) 
-	  	{ 
-		    var correctedlink = StreamSiteVideoLink[index].replace("/Out/?s=","");
-		  	var postdata;
-	    	var getEmissionsResponse = showtime.httpReq(correctedlink,{noFollow:true,compression:true});
-	    	
-	    	var dom = html.parse(getEmissionsResponse.toString());
-	    	var stepkey;
-	    	
-	    	try
-	    	{
-	    		stepkey = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[0].attributes.getNamedItem("value").value;
-	    	}
-	    	catch(e)
-	    	{
-	    		// seems like the file is not available
-	    		continue;
-	    	}
-	
-	    	postdata = {stepkey:stepkey};
-		     
-		    // POSTING DATA
-		    var postresponse = showtime.httpReq(correctedlink, {noFollow:true,compression:true,postdata: postdata, method: "POST" });
-	    	
-		    try
-	    	{
-		    	var cid = /flashvars.cid="(.*)";/gi.exec(postresponse.toString())[1];
-		    	var key = /flashvars.filekey="(.*)";/gi.exec(postresponse.toString())[1];
-		    	var file = /flashvars.file="(.*)";/gi.exec(postresponse.toString())[1];
-	    	}catch(e)
-	    	{
-	    		continue;
-	    	}
-	    	
-		    var postresponse = showtime.httpReq("http://www.novamov.com/api/player.api.php", {method: "GET" , args:{
-		    	user:"undefined",
-		    		cid3:"bs.to",
-		    		pass:"undefined",
-		    		cid:cid,
-		    		cid2:"undefined",
-		    		key:key,
-		    		file:file,
-		    		numOfErrors:"0"
-		    }});
-			    
-		    var finallink = /url=(.*)&title/.exec(postresponse.toString());
-		    ListOfLinks[ListOfLinks.length] = [correctedlink,finallink[1]];
-	  	}
-	  	return ListOfLinks;
-  }
-  
-  // get a list streamlinks and return ruples of streamlink and finallink  
-  function resolveCloudtimeto(StreamSiteVideoLink)
-  {
-	  	var ListOfLinks = [];
-	  	for (var index = 0; index < StreamSiteVideoLink.length; index++) 
-	  	{ 
-		  	// This gets the mobile version of the video file (mp4)
-		  	// due to bad performance this is not used
-		  	/*var videohash= StreamSiteVideoLink.split("/");
-		  	videohash = videohash[videohash.length-1];
-	  		getEmissionsResponse = showtime.httpGet("http://www.cloudtime.to/mobile/video.php?id="+videohash);
-	  	    var finallink = /<source src="(.*)" type="video\/mp4">/gi.exec(getEmissionsResponse.toString());
-	    	return [StreamSiteVideoLink,finallink[1]];*/
-	    	
-	    	// The Request needs to have specific parameters, otherwise the response object is the mobile version of the page
-	    	var getEmissionsResponse = showtime.httpReq(StreamSiteVideoLink[index],{noFollow:true,compression:true});
-	  		  	
-	    	try
-	    	{
-		    	var cid = /flashvars.cid="(.*)";/gi.exec(getEmissionsResponse.toString())[1];
-		    	var key = /flashvars.filekey="(.*)";/gi.exec(getEmissionsResponse.toString())[1];
-		    	var file = /flashvars.file="(.*)";/gi.exec(getEmissionsResponse.toString())[1];
-	    	}catch(e)
-	    	{
-	    		continue;
-	    	}
-	    	
-		    var postresponse = showtime.httpReq("http://www.cloudtime.to/api/player.api.php", {method: "GET" , args:{
-		    	user:"undefined",
-		    		cid3:"bs.to",
-		    		pass:"undefined",
-		    		cid:cid,
-		    		cid2:"undefined",
-		    		key:key,
-		    		file:file,
-		    		numOfErrors:"0"
-		    }});
-			    
-		    var finallink = /url=(.*)&title/.exec(postresponse.toString());
-		        	
-		    ListOfLinks[ListOfLinks.length] = [StreamSiteVideoLink[index],finallink[1]];
-	  	}
-	  	return ListOfLinks;
-  }
-  
-  
-  // get a list streamlinks and return ruples of streamlink and finallink
-  function resolveMovsharenet(StreamSiteVideoLink)
-  {
-	  var ListOfLinks = [];
-	  	for (var index = 0; index < StreamSiteVideoLink.length; index++) 
-	  	{ 
-	  		var correctedlink=StreamSiteVideoLink[index].replace("/Out/?s=","");
-		  	var postdata;
-		
-			// The Request needs to have specific parameters, otherwise the response object is the mobile version of the page
-			var getEmissionsResponse = showtime.httpReq(correctedlink,{noFollow:true,compression:true});
-			
-			var dom = html.parse(getEmissionsResponse.toString());
-			var stepkey;
-			
-			try
-			{
-				stepkey = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[0].attributes.getNamedItem("value").value;
-			}
-			catch(e)
-			{
-				// seems like the file is not available
-				continue;
-			}
-		
-			postdata = {stepkey:stepkey};
-			// POSTING DATA
-			var postresponse = showtime.httpReq(correctedlink, {noFollow:true,compression:true,postdata: postdata, method: "POST" });
-			    
-			try
-			{
-			    	var cid = /flashvars.cid="(.*)";/gi.exec(postresponse.toString())[1];
-			    	var key = /flashvars.filekey="(.*)";/gi.exec(postresponse.toString())[1];
-			    	var file = /flashvars.file="(.*)";/gi.exec(postresponse.toString())[1];
-			}catch(e)
-			{
-				continue;
-			}
-			
-		    var postresponse = showtime.httpReq("http://www.movshare.net/api/player.api.php", {method: "GET" , args:{
-		    	user:"undefined",
-		    		cid3:"bs.to",
-		    		pass:"undefined",
-		    		cid:cid,
-		    		cid2:"undefined",
-		    		key:key,
-		    		file:file,
-		    		numOfErrors:"0"
-		    }});
-			    
-		    var finallink = /url=(.*)&title/.exec(postresponse.toString());
-		    ListOfLinks[ListOfLinks.length] = [correctedlink,finallink[1]];
-	  	}
-	  	return ListOfLinks;
-  }
-  
-  
-  // get a list streamlinks and return tuples of streamlink and finallink
-  function resolveVideoweedes(StreamSiteVideoLink)
-  {
-	  	var ListOfLinks = [];
-	  	for (var index = 0; index < StreamSiteVideoLink.length; index++) 
-	  	{
-	  		var getEmissionsResponse = showtime.httpReq(StreamSiteVideoLink[index],{noFollow:true,compression:true});
-	    	var dom = html.parse(getEmissionsResponse.toString());
-	    	var stepkey;
-	    	
-	    	try
-	    	{
-	    		stepkey = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[0].attributes.getNamedItem("value").value;
-	    	}
-	    	catch(e)
-	    	{
-	    		// seems like the file is not available
-	    		continue;
-	    	}
-
-	    	postdata = {stepkey:stepkey};
-		     
-		    // POSTING DATA
-		    var postresponse = showtime.httpReq(StreamSiteVideoLink[index], {noFollow:true,compression:true,postdata: postdata, method: "POST" });
-	  		  	
-	    	try
-	    	{
-		    	var cid = /flashvars.cid="(.*)";/gi.exec(postresponse.toString())[1];
-		    	var key = /flashvars.filekey="(.*)";/gi.exec(postresponse.toString())[1];
-		    	var file = /flashvars.file="(.*)";/gi.exec(postresponse.toString())[1];
-	    	}catch(e)
-	    	{
-	    		continue;
-	    	}
-	    	
-		    postresponse = showtime.httpReq("http://www.videoweed.es/api/player.api.php", {method: "GET" , args:{
-		    	user:"undefined",
-		    		cid3:"kinox.to",
-		    		pass:"undefined",
-		    		cid:cid,
-		    		cid2:"undefined",
-		    		key:key,
-		    		file:file,
-		    		numOfErrors:"0"
-		    }});
-			    
-		    var finallink = /url=(.*)&title/.exec(postresponse.toString());
-		  	ListOfLinks[ListOfLinks.length] = [StreamSiteVideoLink[index],finallink[1]];
-	  	}  	
-	  	return ListOfLinks;
-  }
-  
-  // get a list streamlinks and return tuples of streamlink and finallink
-  function resolveSharedsx(StreamSiteVideoLink)
-  {
-	  	var ListOfLinks = [];
-	  	var postdata=[];
-	  	for (var index = 0; index < StreamSiteVideoLink.length; index++) 
-	  	{	
-	    	var getEmissionsResponse = showtime.httpGet(StreamSiteVideoLink[index]);
-	    	var dom = html.parse(getEmissionsResponse.toString());
-	    	
-	    	try {
-		    	var hash = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[0].attributes.getNamedItem("value").value;
-			    var expires = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[1].attributes.getNamedItem("value").value;
-			    var timestamp = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[2].attributes.getNamedItem("value").value;
-	    	}catch(e)
-		    {
-		    	// one link down
-	    		postdata[index]=null;
-		    }
-	    	postdata[index]= {hash:hash,expires:expires, timestamp:timestamp};
-		}
-	  	
-		// POST DATA COLLECTED
-		// WAIT 12 SECONDS
-		for (var i = 0; i < 13; i++) {
-		  	showtime.notify("Waiting " + (12-i).toString() +" Seconds",1);
-		    showtime.sleep(1);
-		}
-		
-		for (var index = 0; index < StreamSiteVideoLink.length; index++)
-		{
-			if(postdata[index]!=null)
-			{
-			    // POSTING DATA
-			    var postresponse = showtime.httpReq(StreamSiteVideoLink[index], { postdata: postdata[index], method: "POST" });
-			    dom = html.parse(postresponse.toString());
-			    
-			    var finallink = dom.root.getElementByClassName('stream-content')[0].attributes.getNamedItem("data-url").value
-			    ListOfLinks[ListOfLinks.length] = [StreamSiteVideoLink[index],finallink];
-			}
-		}
-		return ListOfLinks;
-  }
-  
-  // get a list streamlinks and return tuples of streamlink and finallink
-  function resolveNowvideosx(StreamSiteVideoLink)
-  {
-	  	var ListOfLinks = [];
-	  	for (var index = 0; index < StreamSiteVideoLink.length; index++) 
-	  	{
-	  		var postdata;
-
-		  	// The Request needs to have specific parameters, otherwise the response object is the mobile version of the page
-	    	var getEmissionsResponse = showtime.httpReq(StreamSiteVideoLink[index],{noFollow:true,compression:true});
-	    	
-	    	var dom = html.parse(getEmissionsResponse.toString());
-	    	var stepkey;
-	    	
-	    	try
-	    	{
-	    		stepkey = dom.root.getElementByTagName('form')[0].getElementByTagName("input")[0].attributes.getNamedItem("value").value;
-	    	}
-	    	catch(e)
-	    	{
-	    		// seems like the file is not available
-	    		continue;
-	    	}
-
-	    	postdata = {stepkey:stepkey};
-		     
-		    // POSTING DATA
-		    var postresponse = showtime.httpReq(StreamSiteVideoLink[index], {noFollow:true,compression:true,postdata: postdata, method: "POST" });
-		    
-		    try
-	    	{
-		    	var cid = /flashvars.cid="(.*)";/gi.exec(postresponse.toString())[1];
-		    	var key = /var fkzd="(.*)";/gi.exec(postresponse.toString())[1];
-		    	var file = /flashvars.file="(.*)";/gi.exec(postresponse.toString())[1];
-	    	}catch(e)
-	    	{
-	    		// problem with link 
-	    		continue;
-	    	}
-	    	
-		    var postresponse = showtime.httpReq("http://www.nowvideo.sx/api/player.api.php", {method: "GET" , args:{
-		    	user:"undefined",
-		    		cid3:"kinox.to",
-		    		pass:"undefined",
-		    		cid:cid,
-		    		cid2:"undefined",
-		    		key:key,
-		    		file:file,
-		    		numOfErrors:"0"
-		    }});
-			    
-		    var finallink = /url=(.*)&title/.exec(postresponse.toString());
-		    ListOfLinks[ListOfLinks.length] = [StreamSiteVideoLink[index],finallink];    	
-	  	}
-	  	return ListOfLinks;
-  }
-
-  // get a list streamlinks and return tuples of streamlink and finallink
-  function resolveFilenukecom(StreamSiteVideoLink)
-  {
-	  	var ListOfLinks = [];
-	  	for (var index = 0; index < StreamSiteVideoLink.length; index++) 
-	    {
-	    	try{
-		  		var getEmissionsResponse = showtime.httpReq(StreamSiteVideoLink[index],{noFollow:true,compression:true});
-		    	var dom = html.parse(getEmissionsResponse.toString());
-		    	var link= dom.root.getElementById('go-next').attributes.getNamedItem("href").value;
-		    	var postresponse = showtime.httpReq("http://filenuke.com"+link, {noFollow:true,compression:true});
-			    var finallink = /var lnk234 = '(.*)';/gi.exec(postresponse.toString())[1];
-			    ListOfLinks[ListOfLinks.length] = [StreamSiteVideoLink[index],finallink];
-	    	}catch(e)
-	    	{
-	    		// one link perhaps dead?
-	    	}
-	    }
-	    return ListOfLinks;
-  }
-  
-  // get a list streamlinks and return tuples of streamlink and finallink
-  function resolveStreamcloudeu(StreamSiteVideoLink)
-  {
-	  	var postdatas = [];
-	  	var validentries = false;
-	  	
-	    for (var index = 0; index < StreamSiteVideoLink.length; index++) 
-	    {
-	    	var getEmissionsResponse = showtime.httpGet(StreamSiteVideoLink[index]);
-	    	var pattern = new RegExp('<input type="hidden" name="op" value="(.*?)">[^<]+<input type="hidden" name="usr_login" value="(.*?)">[^<]+<input type="hidden" name="id" value="(.*?)">[^<]+<input type="hidden" name="fname" value="(.*?)">[^<]+<input type="hidden" name="referer" value="(.*?)">[^<]+<input type="hidden" name="hash" value="(.*?)">[^<]+<input type="submit" name="imhuman" id="btn_download" class="button gray" value="(.*?)">');
-	    	var res = pattern.exec(getEmissionsResponse.toString());
-		    
-		    // File Not Found (404) Error 
-		    if(res != null)
-		    {
-		    	postdatas[postdatas.length] = {op:res[1], usr_login:res[2], id: res[3],fname:res[4],referer: res[5],hash:res[6],imhuman:res[7]};
-		    	validentries = true;
-		    }
-		    else
-		    	postdatas[postdatas.length] = null;
-	    }
-	    
-	    var ListOfLinks = [];
-	    
-	    if(!validentries)
-	    {
-	    	return ListOfLinks;
-	    }
-	    
-	    // POST DATA COLLECTED WAIT 11 SECONDS
-	    for (var i = 0; i < 12; i++) {
-	    	showtime.notify("Waiting " + (11-i).toString() +" Seconds",1);
-	        showtime.sleep(1);
-	    }
-	     
-	    // POSTING DATA
-	    for (var index = 0; index < postdatas.length; index++) 
-	    {
-	    	// check if valid entry
-	    	if(postdatas[index] != null)
-	    	{
-		    	var postresponse = showtime.httpReq(StreamSiteVideoLink[index], { postdata:  postdatas[index], method: "POST" });
-		    	var videopattern = new RegExp('file: "(.*?)",');
-		    	var res2 = videopattern.exec(postresponse.toString());
-		    	ListOfLinks[ListOfLinks.length] = [StreamSiteVideoLink[index],res2[1]];
-	    	}
-	    }
-	    return ListOfLinks;
-  }
-  
-  
-  function HosterResolution(hosternumber, StreamSiteVideoLink)
-  {
-	    // List of tuples of streamlink and direct video link
-  		var FinalLinks=[];
-	    
-	    // Streamcloud.eu
-	    if(hosternumber == 30)
-	    {
-	    	FinalLinks = resolveStreamcloudeu(StreamSiteVideoLink);
-	    }
-	    // Filenuke.com
-	    else if (hosternumber == 34)
-    	{
-	    	FinalLinks = resolveFilenukecom(StreamSiteVideoLink);
-    	}
-	    // NowVideo.sx
-	    else if(hosternumber == 40)
-    	{
-	    	FinalLinks = resolveNowvideosx(StreamSiteVideoLink);
-    	}
-	    // Shared.sx
-	    else if (hosternumber == 52)
-	    {
-	    	FinalLinks = resolveSharedsx(StreamSiteVideoLink);
-	    }
-	    // VideoWeed.es
-	    else if (hosternumber == 24)
-	    {
-	    	FinalLinks = resolveVideoweedes(StreamSiteVideoLink);
-	    }
-	    // Movshare.net
-	    else if (hosternumber == 7)
-	    {
-	    	FinalLinks = resolveMovsharenet(StreamSiteVideoLink);
-	    }
-	    // Cloudtime.to
-	    else if (hosternumber == 8)
-	    {
-	    	FinalLinks = resolveCloudtimeto(StreamSiteVideoLink);
-	    }
-	    // Novamov.com
-	    else if (hosternumber == 15)
-	    {
-	    	FinalLinks = resolveNovamovcom(StreamSiteVideoLink);
-	    }
-	    // Flashx.tv
-	    else if (hosternumber == 33)
-	    {
-	    	FinalLinks = resolveFlashxtv(StreamSiteVideoLink);
-	    }
-	    // Promptfile.com
-	    else if (hosternumber == 56)
-	    {
-	    	FinalLinks = resolvePromptfilecom(StreamSiteVideoLink);
-	    }
-	    
-	    
-	    return FinalLinks;
-	    
-  }
-  
-  function checkResolver(hosterid)
-  {
-	  var hosternumber = hosterid.split("_")[1];
-	  
-	  if(availableResolvers.indexOf(hosternumber) > -1)
-	  	  return " <font color=\"009933\">[Working]</font>";
-	  else
-		  return " <font color=\"CC0000\">[Not Working]</font>";
-  }
-  
-  //TODO: Use HTML Parser / better performance?
+  // TODO: Use HTML Parser / better performance?
   // extract direct link from response
   function getStreamSiteLink(response)
   {
 	  	var text = response.toString().replace(/\\/g,'');
 	  	var firstcut = text.match(/<a href="(.*)" target=/)[1]; 
-	  	return firstcut.split('" target=')[0];
+	  	return firstcut.split('" target=')[0].replace("/Out/?s=","");
   }
     
   // function which gives available hosts for given response (season and episode are X if link is a movie)
@@ -609,32 +60,55 @@
 	  	{
     		var hostname = entries[k].getElementByClassName("Named")[0].textContent;
     		var id = entries[k].attributes.getNamedItem("id").value
-    		var resolverstatus = checkResolver(id);
-    		var maxMirror =  entries[k].getElementByClassName("Data")[0].textContent.split(":")[1].split("/")[1];
     		
-    		if(resolverstatus.indexOf("Not Working")>1)
+    		// get id and translate to hoster name
+    		var resolverstatus = resolvers.check(HosternameDict[parseInt(id.split("_")[1])]);
+	    	var statusmessage = resolverstatus ? " <font color=\"009933\">[Working]</font>":" <font color=\"CC0000\">[Not Working]</font>";
+    		
+    		var maxMirror =  entries[k].getElementByClassName("Data")[0].textContent.split(":")[1].split("/")[1].replace("Vom","");
+    		
+    		if(resolverstatus)
 	    	{
-	    		page.appendPassiveItem('video', '', { title: new showtime.RichText(hostname + resolverstatus)  });
+    			page.appendItem(PLUGIN_PREFIX + ":PlayEpisode:"+ URLname + ":" + id + ":"+maxMirror+":"+season+":"+episode  , 'directory', {
+	    			  title: new showtime.RichText(hostname + statusmessage)
+	    			});
 	    	}
 	    	else
 	    	{
-	    		page.appendItem(PLUGIN_PREFIX + ":PlayEpisode:"+ URLname + ":" + id + ":"+maxMirror+":"+season+":"+episode  , 'directory', {
-	    			  title: new showtime.RichText(hostname + resolverstatus)
-	    			});
+	    		page.appendPassiveItem('video', '', { title: new showtime.RichText(hostname + statusmessage)  });
 	    	}
-    		
 	  	}
   }
+  
+  // resolves the hoster link and gives the final link to the stream file
+  plugin.addURI(PLUGIN_PREFIX + ":StreamPlayer:(.*):(.*)", function(page,episodeLink, hostername){
+	  	page.type = 'directory';
+		page.metadata.title = hostername;
+
+		var vidlink = resolvers.resolve(decode_utf8(episodeLink), hostername);
+		if(vidlink == null)
+    		page.appendPassiveItem('video', '', { title: "File is not available"  });
+		else
+			page.appendItem(vidlink[1], 'video', { title: vidlink[0] });
+  });
+  
+  function encode_utf8(s) {
+	  return encodeURI(s);
+	}
+
+  function decode_utf8(s) {
+	  return decodeURI(s);
+	}
   
   // Here we have one specific Hoster selected and need to handle their links
   plugin.addURI(PLUGIN_PREFIX + ":PlayEpisode:(.*):(.*):(.*):(.*):(.*)", function(page, URLname, hosterid,  maxmirror, season, episode){
 	  	page.type = 'directory';
-
 	    var hosteridnumber = hosterid.split("_")[1];
-	    var StreamSiteVideoLink = [];
-
+	    var nofiles=true;
+	    
 	    for (var index = 1; index <= maxmirror; index++) 
 		{
+	    	nofiles = false;
 	    	var args;
 	    	if(season == "X")
 	    		args = {Hoster:hosteridnumber , Mirror: index};
@@ -642,22 +116,15 @@
 	    		args = {Hoster:hosteridnumber , Mirror: index, Season:season, Episode:episode};
 
 	    	var getMirrorLink = showtime.httpGet("http://kinox.to/aGET/Mirror/"+URLname, args );
-	    	StreamSiteVideoLink[StreamSiteVideoLink.length] = getStreamSiteLink(getMirrorLink);
+    	
+	    	// page with the streamlink and hostername
+	    	page.appendItem(PLUGIN_PREFIX + ":StreamPlayer:" + encode_utf8(getStreamSiteLink(getMirrorLink)) + ":" + HosternameDict[parseInt(hosteridnumber)], 'directory', {
+	  			  title: HosternameDict[parseInt(hosteridnumber)] + index.toString()
+	  			});
 		}
 	  
-	    // Here we handle the Hoster specific resolution
-	    var links = HosterResolution(hosteridnumber, StreamSiteVideoLink);
-	    
-	    // If we have no links  
-	    if(links.length == 0)
+	    if(nofiles)
 	    	page.appendPassiveItem("label", null, { title: "No Valid Links Available"});
-	    else
-	    {
-		    for(var index = 0; index < links.length; index++)
-		    {
-		    	page.appendItem(links[index][1], 'video', { title: links[index][0]});
-		    }
-	    }
   });
   
   // gives list of available hosts for given episode

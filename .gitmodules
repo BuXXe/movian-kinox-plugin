@@ -1,0 +1,3 @@
+[submodule "kinox.to/libs/hoster-resolution-library"]
+	path = kinox.to/libs/hoster-resolution-library
+	url = https://github.com/BuXXe/hoster-resolution-library.git
