@@ -84,8 +84,8 @@
   plugin.addURI(PLUGIN_PREFIX + ":StreamPlayer:(.*):(.*)", function(page,episodeLink, hostername){
 	  	page.type = 'directory';
 		page.metadata.title = hostername;
-
-		var vidlink = resolvers.resolve(decode_utf8(episodeLink), hostername);
+		
+		var vidlink = resolvers.resolve(decodeURIComponent(episodeLink), hostername);
 		if(vidlink == null)
     		page.appendPassiveItem('video', '', { title: "File is not available"  });
 		else
@@ -118,7 +118,7 @@
 	    	var getMirrorLink = showtime.httpGet("http://kinox.to/aGET/Mirror/"+URLname, args );
     	
 	    	// page with the streamlink and hostername
-	    	page.appendItem(PLUGIN_PREFIX + ":StreamPlayer:" + encode_utf8(getStreamSiteLink(getMirrorLink)) + ":" + HosternameDict[parseInt(hosteridnumber)], 'directory', {
+	    	page.appendItem(PLUGIN_PREFIX + ":StreamPlayer:" + encodeURIComponent(getStreamSiteLink(getMirrorLink)) + ":" + HosternameDict[parseInt(hosteridnumber)], 'directory', {
 	  			  title: HosternameDict[parseInt(hosteridnumber)] + index.toString()
 	  			});
 		}
