@@ -30,6 +30,8 @@
   var HosternameDict = { 
 	7:"Wholecloud",
 	8:"Cloudtime",
+	15:"AuroraVid",
+	24:"Videoweed",
 	30:"Streamcloud",
 	31:"Xvidstage",
 	33:"Flashx",
