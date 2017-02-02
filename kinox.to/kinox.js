@@ -71,7 +71,7 @@
     		
     		if(resolverstatus)
 	    	{
-    			page.appendItem(PLUGIN_PREFIX + ":PlayEpisode:"+ URLname + ":" + id + ":"+maxMirror+":"+season+":"+episode  , 'directory', {
+    			page.appendItem(PLUGIN_PREFIX + ":PlayEpisode:"+ URLname + ":" + id + ":"+maxMirror+":"+season+":"+episode +":"+encodeURIComponent(page.metadata.title + " - " + hostname) , 'directory', {
 	    			  title: new showtime.RichText(hostname + statusmessage)
 	    			});
 	    	}
@@ -83,11 +83,11 @@
   }
   
   // resolves the hoster link and gives the final link to the stream file
-  plugin.addURI(PLUGIN_PREFIX + ":StreamPlayer:(.*):(.*)", function(page,episodeLink, hostername){
+  plugin.addURI(PLUGIN_PREFIX + ":StreamPlayer:(.*):(.*):(.*)", function(page,episodeLink, hostername,title){
 	  	page.type = 'directory';
-	  	page.metadata.icon = Plugin.path + 'kinox.png';
-		page.metadata.title = hostername;
-		
+		page.metadata.icon = Plugin.path + 'kinox.png';
+	    page.metadata.title = decodeURIComponent(title);
+
 		var vidlink = resolvers.resolve(decodeURIComponent(episodeLink), hostername);
 		if(vidlink == null)
     		page.appendPassiveItem('video', '', { title: "File is not available"  });
@@ -104,14 +104,16 @@
 	}
   
   // Here we have one specific Hoster selected and need to handle their links
-  plugin.addURI(PLUGIN_PREFIX + ":PlayEpisode:(.*):(.*):(.*):(.*):(.*)", function(page, URLname, hosterid,  maxmirror, season, episode){
+  plugin.addURI(PLUGIN_PREFIX + ":PlayEpisode:(.*):(.*):(.*):(.*):(.*):(.*)", function(page, URLname, hosterid,  maxmirror, season, episode,title){
 	  	page.type = 'directory';
 	  	page.metadata.icon = Plugin.path + 'kinox.png';
 	  	var hosteridnumber = hosterid.split("_")[1];
 	    var nofiles=true;
-	    
+	    page.metadata.title = decodeURIComponent(title);
+	   
 	    for (var index = 1; index <= maxmirror; index++) 
 		{
+	    	var finaltitle = encodeURIComponent(page.metadata.title + " - Mirror " + index.toString());
 	    	nofiles = false;
 	    	var args;
 	    	if(season == "X")
@@ -122,7 +124,7 @@
 	    	var getMirrorLink = showtime.httpGet("http://kinox.to/aGET/Mirror/"+URLname, args );
     	
 	    	// page with the streamlink and hostername
-	    	page.appendItem(PLUGIN_PREFIX + ":StreamPlayer:" + encodeURIComponent(getStreamSiteLink(getMirrorLink)) + ":" + HosternameDict[parseInt(hosteridnumber)], 'directory', {
+	    	page.appendItem(PLUGIN_PREFIX + ":StreamPlayer:" + encodeURIComponent(getStreamSiteLink(getMirrorLink)) + ":" + HosternameDict[parseInt(hosteridnumber)] +":"+finaltitle, 'directory', {
 	  			  title: HosternameDict[parseInt(hosteridnumber)] + index.toString()
 	  			});
 		}
@@ -135,6 +137,8 @@
   plugin.addURI(PLUGIN_PREFIX + ":EpisodesHandler:(.*):(.*):(.*):(.*)", function(page,seriesname, seriesID, season, episode){
 	  page.type = 'directory';
 	  page.metadata.icon = Plugin.path + 'kinox.png';
+	  
+	  page.metadata.title = seriesname + " Season " + season + " - Episode " + episode;
 	  var args = {Addr:seriesname , SeriesID:seriesID ,Season:season, Episode:episode};
 	  var getMirrorLink = showtime.httpGet("http://kinox.to/aGET/MirrorByEpisode/", args );
 	  
@@ -145,6 +149,7 @@
   plugin.addURI(PLUGIN_PREFIX + ":SeasonHandler:(.*):(.*):(.*):(.*)", function(page,seriesname,seriesID, season, episodelist){
 	  page.type = 'directory';
 	  page.metadata.icon = Plugin.path + 'kinox.png';
+	  page.metadata.title = seriesname + " Season " + season;
 	  var episodesArray = episodelist.split(',');
 
 	  for (var i=0;i<episodesArray.length;i++)
@@ -164,7 +169,16 @@
 	    var URLname = movie.split(".html")[0].split("/Stream/")[1]
 	  	var dom = html.parse(moviepageresponse.toString());
 	    var SeasonSelection =  dom.root.getElementById('SeasonSelection')
-
+	    var title = "No Title found";
+	    try{
+	    	title = dom.root.getElementByTagName("h1")[1].getElementByTagName("span")[0].textContent;
+	    }catch(e)
+	    {
+	    	// no title found or structure changed;
+	    	showtime.trace("Could not find title");
+	    }
+	    page.metadata.title = title;
+	    
 	    // differentiate between series and movies: if we have a series, the season selection exists
 	    if(SeasonSelection)
 	    {
