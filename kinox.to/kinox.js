@@ -77,7 +77,7 @@
 	    	}
 	    	else
 	    	{
-	    		page.appendPassiveItem('video', '', { title: new showtime.RichText(hostname + statusmessage)  });
+	    		page.appendPassiveItem('directory', '', { title: new showtime.RichText(hostname + statusmessage)  });
 	    	}
 	  	}
   }
