@@ -85,6 +85,7 @@
   // resolves the hoster link and gives the final link to the stream file
   plugin.addURI(PLUGIN_PREFIX + ":StreamPlayer:(.*):(.*)", function(page,episodeLink, hostername){
 	  	page.type = 'directory';
+	  	page.metadata.icon = Plugin.path + 'kinox.png';
 		page.metadata.title = hostername;
 		
 		var vidlink = resolvers.resolve(decodeURIComponent(episodeLink), hostername);
@@ -105,7 +106,8 @@
   // Here we have one specific Hoster selected and need to handle their links
   plugin.addURI(PLUGIN_PREFIX + ":PlayEpisode:(.*):(.*):(.*):(.*):(.*)", function(page, URLname, hosterid,  maxmirror, season, episode){
 	  	page.type = 'directory';
-	    var hosteridnumber = hosterid.split("_")[1];
+	  	page.metadata.icon = Plugin.path + 'kinox.png';
+	  	var hosteridnumber = hosterid.split("_")[1];
 	    var nofiles=true;
 	    
 	    for (var index = 1; index <= maxmirror; index++) 
@@ -132,6 +134,7 @@
   // gives list of available hosts for given episode
   plugin.addURI(PLUGIN_PREFIX + ":EpisodesHandler:(.*):(.*):(.*):(.*)", function(page,seriesname, seriesID, season, episode){
 	  page.type = 'directory';
+	  page.metadata.icon = Plugin.path + 'kinox.png';
 	  var args = {Addr:seriesname , SeriesID:seriesID ,Season:season, Episode:episode};
 	  var getMirrorLink = showtime.httpGet("http://kinox.to/aGET/MirrorByEpisode/", args );
 	  
@@ -141,6 +144,7 @@
   // Lists the available episodes for a given season
   plugin.addURI(PLUGIN_PREFIX + ":SeasonHandler:(.*):(.*):(.*):(.*)", function(page,seriesname,seriesID, season, episodelist){
 	  page.type = 'directory';
+	  page.metadata.icon = Plugin.path + 'kinox.png';
 	  var episodesArray = episodelist.split(',');
 
 	  for (var i=0;i<episodesArray.length;i++)
@@ -155,6 +159,7 @@
   plugin.addURI(PLUGIN_PREFIX + ':StreamSelection:(.*)', function(page, movie) {
 	  	page.loading = false;
 	  	page.type = 'directory';
+	  	page.metadata.icon = Plugin.path + 'kinox.png';
 	  	var moviepageresponse = showtime.httpGet('http://kinox.to'+movie);
 	    var URLname = movie.split(".html")[0].split("/Stream/")[1]
 	  	var dom = html.parse(moviepageresponse.toString());
@@ -186,7 +191,7 @@
   plugin.addURI(PLUGIN_PREFIX + ':CineFilms', function(page) {
 	  	page.type = "directory";
 	    page.metadata.title = "kinox.to Recent Cinema Movies";
-	    
+	    page.metadata.icon = Plugin.path + 'kinox.png';
 	  	var CineFilmsResponse = showtime.httpGet("http://kinox.to/Cine-Films.html");
 	  	var dom = html.parse(CineFilmsResponse.toString());
 	  	var children =  dom.root.getElementById('Vadda').children;
@@ -210,7 +215,7 @@
   plugin.addURI(PLUGIN_PREFIX+":Search",function(page) {
 	  page.type="directory";
 	  page.metadata.title = "kinox.to Search";
-
+	  page.metadata.icon = Plugin.path + 'kinox.png';
 	  var res = showtime.textDialog("What do you want to search for?", true,true);
 	  
 	  // check for user abort
@@ -248,6 +253,8 @@
   // Register Start Page
   plugin.addURI(PLUGIN_PREFIX+"start", function(page) {
     page.type = "directory";
+	page.metadata.icon = Plugin.path + 'kinox.png';
+
     page.metadata.title = "kinox.to Main Menu";
     page.appendItem(PLUGIN_PREFIX + ':CineFilms', 'directory',{ title: "Recent Cinema Movies",});
     page.appendItem(PLUGIN_PREFIX + ':Search','item',{ title: "Search...",});
