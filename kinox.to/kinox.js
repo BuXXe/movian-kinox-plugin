@@ -43,13 +43,11 @@
 	68:"Vidzi"
   };
 
-  // TODO: Use HTML Parser / better performance?
   // extract direct link from response
   function getStreamSiteLink(response)
   {
-	  	var text = response.toString().replace(/\\/g,'');
-	  	var firstcut = text.match(/<a href="(.*)" target=/)[1]; 
-	  	return firstcut.split('" target=')[0].replace("/Out/?s=","");
+	  var h = /(iframe src="|a href=")(.*?)"/g.exec(showtime.JSONDecode(response.toString()).Stream);
+	  return h[2].replace("/Out/?s=","");
   }
     
   // function which gives available hosts for given response (season and episode are X if link is a movie)
