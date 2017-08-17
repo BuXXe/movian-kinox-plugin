@@ -224,38 +224,31 @@
   });
 
   // handles the search 
-  plugin.addURI(PLUGIN_PREFIX+":Search",function(page) {
+  plugin.addURI(PLUGIN_PREFIX+":Search:(.*)",function(page, searchquery) {
 	  page.type="directory";
 	  page.metadata.title = "kinox.to Search";
 	  page.metadata.icon = Plugin.path + 'kinox.png';
-	  var res = showtime.textDialog("What do you want to search for?", true,true);
-	  
-	  // check for user abort
-	  if(res.rejected)
-		  page.redirect(PLUGIN_PREFIX+"start");
-	  else
-	  {
-		  var SearchQueryResponse = showtime.httpGet("http://kinox.to/Search.html",{ q: res.input});
-		  var dom = html.parse(SearchQueryResponse.toString());
-		  var children = dom.root.getElementById("RsltTableStatic").getElementByTagName("tbody")[0].children;
-		  
-		  for(var k=0; k< children.length; k++)
-		  {
-			  var streamLink = children[k].getElementByClassName("Title")[0].getElementByTagName("a")[0].attributes.getNamedItem("href").value;
 
-			  // some entries in the search need to be filtered out:
-			  if(streamLink.indexOf("Search.html") > -1 || streamLink =="")
-				  continue;
-			  
-			  var type = children[k].getElementByClassName("Icon")[1].getElementByTagName("img")[0].attributes.getNamedItem("title").value;
-			  var title = children[k].getElementByClassName("Title")[0].getElementByTagName("a")[0].textContent;
-			  var language = children[k].getElementByClassName("Icon")[0].getElementByTagName("img")[0].attributes.getNamedItem("src").value;
-			  
-			  page.appendItem(PLUGIN_PREFIX + ':StreamSelection:'+ streamLink, 'video', {
-				  title: type + " - " + title,
-				  icon: "http://kinox.to"+language
-				});
-		  }
+	  var SearchQueryResponse = showtime.httpGet("http://kinox.to/Search.html",{ q: searchquery});
+	  var dom = html.parse(SearchQueryResponse.toString());
+	  var children = dom.root.getElementById("RsltTableStatic").getElementByTagName("tbody")[0].children;
+	  
+	  for(var k=0; k< children.length; k++)
+	  {
+		  var streamLink = children[k].getElementByClassName("Title")[0].getElementByTagName("a")[0].attributes.getNamedItem("href").value;
+
+		  // some entries in the search need to be filtered out:
+		  if(streamLink.indexOf("Search.html") > -1 || streamLink =="")
+			  continue;
+		  
+		  var type = children[k].getElementByClassName("Icon")[1].getElementByTagName("img")[0].attributes.getNamedItem("title").value;
+		  var title = children[k].getElementByClassName("Title")[0].getElementByTagName("a")[0].textContent;
+		  var language = children[k].getElementByClassName("Icon")[0].getElementByTagName("img")[0].attributes.getNamedItem("src").value;
+		  
+		  page.appendItem(PLUGIN_PREFIX + ':StreamSelection:'+ streamLink, 'video', {
+			  title: type + " - " + title,
+			  icon: "http://kinox.to"+language
+		  });
 	  }
   });
   
@@ -268,8 +261,8 @@
 	page.metadata.icon = Plugin.path + 'kinox.png';
 
     page.metadata.title = "kinox.to Main Menu";
+    page.appendItem(PLUGIN_PREFIX + ':Search:', 'search' ,{ title: "Search...",});
     page.appendItem(PLUGIN_PREFIX + ':CineFilms', 'directory',{ title: "Recent Cinema Movies",});
-    page.appendItem(PLUGIN_PREFIX + ':Search','item',{ title: "Search...",});
 	page.loading = false;
   });
 
