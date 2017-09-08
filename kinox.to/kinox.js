@@ -43,6 +43,33 @@
 	68:"Vidzi"
   };
 
+  var LanguageDict = [
+    "de",
+    "en",
+    "??", // 3
+    "zh",
+    "es",
+    "fr",
+    "tr",
+    "ja",
+    "ar",
+    "??", //10
+    "it",
+    "hr",
+    "sr",
+    "bs",
+    "de/en",
+    "nl",
+    "ko",
+    "??", "??", "??", // 18-20
+    "is",
+    "pl",
+    "fi",
+    "el",
+    "ru",
+    "hi"
+  ]
+
   // extract direct link from response
   function getStreamSiteLink(response)
   {
@@ -223,6 +250,23 @@
 	    }
   });
 
+  // This subroutine generates anonymous routines for the async http callback because only the last item would be updated if its not done
+  // like this. if you know a nicer way let me know.   -gordon
+  function generateCallback(item) {
+    return function(err, result) {
+      try {
+        var dom = html.parse(result.toString());
+        var icon = 'http://kinox.to' + dom.root.getElementByClassName("Grahpics")[0].getElementByTagName("img")[0].attributes.getNamedItem("src").value;
+        var desc = dom.root.getElementByClassName("Descriptore")[0].textContent.replace('Jetzt herunterladen!', '');
+        item.root.metadata.icon = icon;
+        item.root.metadata.description = desc;
+      } catch(e) {
+        print(e);
+        throw(e);
+      }
+    }
+  }
+
   // handles the search 
   plugin.addURI(PLUGIN_PREFIX+":Search:(.*)",function(page, searchquery) {
 	  page.type="directory";
@@ -244,11 +288,21 @@
 		  var type = children[k].getElementByClassName("Icon")[1].getElementByTagName("img")[0].attributes.getNamedItem("title").value;
 		  var title = children[k].getElementByClassName("Title")[0].getElementByTagName("a")[0].textContent;
 		  var language = children[k].getElementByClassName("Icon")[0].getElementByTagName("img")[0].attributes.getNamedItem("src").value;
-		  
-		  page.appendItem(PLUGIN_PREFIX + ':StreamSelection:'+ streamLink, 'video', {
-			  title: type + " - " + title,
-			  icon: "http://kinox.to"+language
-		  });
+      try {
+        language = parseInt(language.match(/([0-9]{1,2})\.png/)[1] - 1);
+        if (language < LanguageDict.length) {
+          language = LanguageDict[language];
+        } else {
+          language = "??";
+        }
+      } catch(e) {
+        language = "??";
+      }
+
+		  var item = page.appendItem(PLUGIN_PREFIX + ':StreamSelection:'+ streamLink, 'video', {title: language + " - " + type + " - " + title});
+
+		  // Start an asynchronus request to get image and description
+		  showtime.httpReq('http://kinox.to'+streamLink, {compression: true}, generateCallback(item));
 	  }
   });
   
@@ -258,12 +312,12 @@
   // Register Start Page
   plugin.addURI(PLUGIN_PREFIX+"start", function(page) {
     page.type = "directory";
-	page.metadata.icon = Plugin.path + 'kinox.png';
+    page.metadata.icon = Plugin.path + 'kinox.png';
 
     page.metadata.title = "kinox.to Main Menu";
     page.appendItem(PLUGIN_PREFIX + ':Search:', 'search' ,{ title: "Search...",});
     page.appendItem(PLUGIN_PREFIX + ':CineFilms', 'directory',{ title: "Recent Cinema Movies",});
-	page.loading = false;
+    page.loading = false;
   });
 
 })(this);
